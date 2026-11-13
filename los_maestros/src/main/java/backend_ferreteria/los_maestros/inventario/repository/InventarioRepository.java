@@ -1,4 +1,24 @@
 package backend_ferreteria.los_maestros.inventario.repository;
 
-public class InventarioRepository {
+import backend_ferreteria.los_maestros.inventario.model.Inventario;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface InventarioRepository extends JpaRepository<Inventario, String> {
+
+    @Override
+    @EntityGraph(attributePaths = "producto")
+    List<Inventario> findAll();
+
+    @Override
+    @EntityGraph(attributePaths = "producto")
+    Optional<Inventario> findById(String sku);
+
+    @EntityGraph(attributePaths = "producto")
+    @Query("select i from Inventario i where i.cantidad <= i.stockMinimo")
+    List<Inventario> findBajoStock();
 }

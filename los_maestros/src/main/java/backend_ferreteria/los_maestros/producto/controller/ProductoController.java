@@ -10,8 +10,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/productos")
+@RequestMapping("/api/productos")
 public class ProductoController {
+
     private final ProductoService productoService;
 
     public ProductoController(ProductoService productoService) {
@@ -23,9 +24,9 @@ public class ProductoController {
         return ResponseEntity.ok(productoService.listarTodos());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ProductoDTO> obtener(@PathVariable Long id) {
-        return ResponseEntity.ok(productoService.obtenerPorId(id));
+    @GetMapping("/{sku}")
+    public ResponseEntity<ProductoDTO> obtener(@PathVariable String sku) {
+        return ResponseEntity.ok(productoService.obtenerPorSku(sku));
     }
 
     @GetMapping("/categoria/{categoria}")
@@ -43,15 +44,15 @@ public class ProductoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(productoService.crear(dto));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ProductoDTO> actualizar(@PathVariable Long id,
+    @PutMapping("/{sku}")
+    public ResponseEntity<ProductoDTO> actualizar(@PathVariable String sku,
                                                   @Valid @RequestBody ProductoDTO dto) {
-        return ResponseEntity.ok(productoService.actualizar(id, dto));
+        return ResponseEntity.ok(productoService.actualizar(sku, dto));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        productoService.eliminar(id);
+    @DeleteMapping("/{sku}")
+    public ResponseEntity<Void> eliminar(@PathVariable String sku) {
+        productoService.eliminar(sku);
         return ResponseEntity.noContent().build();
     }
 }
