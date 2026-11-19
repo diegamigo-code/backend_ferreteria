@@ -1,5 +1,6 @@
 package backend_ferreteria.los_maestros.user.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -10,13 +11,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDate;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
 public class UserDTO {
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long id;
 
     @NotBlank
@@ -30,7 +33,7 @@ public class UserDTO {
 
     @NotNull
     @Past
-    private Date fechaNacimiento;
+    private LocalDate fechaNacimiento;
 
     @NotBlank
     @Size(max = 255)

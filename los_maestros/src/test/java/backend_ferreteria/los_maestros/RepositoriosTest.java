@@ -53,9 +53,11 @@ class RepositoriosTest {
         productoRepository.saveAndFlush(producto);
         productoRepository.saveAndFlush(DatosDePrueba.producto());
 
-        assertThat(productoRepository.findByCategoria(producto.getCategoria()))
+        Pageable pagina = PageRequest.of(0, 50);
+
+        assertThat(productoRepository.findByCategoriaIgnoreCase(producto.getCategoria().toUpperCase(), pagina).getContent())
                 .extracting(Producto::getSku).contains(producto.getSku());
-        assertThat(productoRepository.findByMarca(producto.getMarca()))
+        assertThat(productoRepository.findByMarcaIgnoreCase(producto.getMarca().toLowerCase(), pagina).getContent())
                 .extracting(Producto::getSku).contains(producto.getSku());
     }
 

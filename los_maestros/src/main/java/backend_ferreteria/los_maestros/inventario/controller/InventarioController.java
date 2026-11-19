@@ -4,6 +4,9 @@ import backend_ferreteria.los_maestros.inventario.dto.InventarioDTO;
 import backend_ferreteria.los_maestros.inventario.dto.MovimientoStockDTO;
 import backend_ferreteria.los_maestros.inventario.service.InventarioService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +24,9 @@ public class InventarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<InventarioDTO>> listar() {
-        return ResponseEntity.ok(inventarioService.listarTodos());
+    public ResponseEntity<PagedModel<InventarioDTO>> listar(
+            @PageableDefault(size = 20, sort = "sku") Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(inventarioService.listar(pageable)));
     }
 
     @GetMapping("/bajo-stock")

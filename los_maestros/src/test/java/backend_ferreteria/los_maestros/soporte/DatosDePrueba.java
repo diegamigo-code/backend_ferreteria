@@ -3,6 +3,7 @@ package backend_ferreteria.los_maestros.soporte;
 import backend_ferreteria.los_maestros.inventario.model.Inventario;
 import backend_ferreteria.los_maestros.producto.dto.ProductoDTO;
 import backend_ferreteria.los_maestros.producto.model.Producto;
+import backend_ferreteria.los_maestros.user.dto.UserDTO;
 import net.datafaker.Faker;
 
 import java.util.Locale;
@@ -34,8 +35,8 @@ public final class DatosDePrueba {
         return recortar(FAKER.commerce().department(), 100);
     }
 
-    public static double precio() {
-        return FAKER.number().numberBetween(990, 250_000);
+    public static long precio() {
+        return FAKER.number().numberBetween(990L, 250_000L);
     }
 
     public static String descripcion() {
@@ -52,6 +53,21 @@ public final class DatosDePrueba {
 
     public static Producto producto() {
         return new Producto(sku(), nombre(), marca(), categoria(), precio(), descripcion());
+    }
+
+    public static String email() {
+        return FAKER.regexify("[a-z]{5,10}\\.[a-z]{4,8}[0-9]{3}") + "@"
+                + FAKER.options().option("gmail.com", "outlook.com", "ferreteria.cl");
+    }
+
+    public static UserDTO usuarioDTO() {
+        return new UserDTO(
+                null,
+                recortar(FAKER.name().fullName(), 100),
+                email(),
+                FAKER.timeAndDate().birthday(18, 80),
+                recortar(FAKER.address().fullAddress(), 255)
+        );
     }
 
     public static Inventario inventario(Producto producto, int cantidad, int stockMinimo) {

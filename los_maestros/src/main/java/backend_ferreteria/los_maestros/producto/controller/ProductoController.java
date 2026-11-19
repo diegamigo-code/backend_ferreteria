@@ -3,11 +3,12 @@ package backend_ferreteria.los_maestros.producto.controller;
 import backend_ferreteria.los_maestros.producto.dto.ProductoDTO;
 import backend_ferreteria.los_maestros.producto.service.ProductoService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/productos")
@@ -20,8 +21,9 @@ public class ProductoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductoDTO>> listar() {
-        return ResponseEntity.ok(productoService.listarTodos());
+    public ResponseEntity<PagedModel<ProductoDTO>> listar(
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(productoService.listar(pageable)));
     }
 
     @GetMapping("/{sku}")
@@ -30,13 +32,17 @@ public class ProductoController {
     }
 
     @GetMapping("/categoria/{categoria}")
-    public ResponseEntity<List<ProductoDTO>> listarPorCategoria(@PathVariable String categoria) {
-        return ResponseEntity.ok(productoService.listarPorCategoria(categoria));
+    public ResponseEntity<PagedModel<ProductoDTO>> listarPorCategoria(
+            @PathVariable String categoria,
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(productoService.listarPorCategoria(categoria, pageable)));
     }
 
     @GetMapping("/marca/{marca}")
-    public ResponseEntity<List<ProductoDTO>> listarPorMarca(@PathVariable String marca) {
-        return ResponseEntity.ok(productoService.listarPorMarca(marca));
+    public ResponseEntity<PagedModel<ProductoDTO>> listarPorMarca(
+            @PathVariable String marca,
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(productoService.listarPorMarca(marca, pageable)));
     }
 
     @PostMapping

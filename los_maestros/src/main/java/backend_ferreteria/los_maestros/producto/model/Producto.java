@@ -50,7 +50,7 @@ public class Producto {
     @NotNull
     @PositiveOrZero
     @Column(nullable = false)
-    private Double precio;
+    private Long precio;
 
     @NotBlank
     @Size(max = 1000)

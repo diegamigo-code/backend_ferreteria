@@ -1,19 +1,21 @@
 package backend_ferreteria.los_maestros.producto.service;
 
+import backend_ferreteria.los_maestros.producto.ProductoApi;
 import backend_ferreteria.los_maestros.producto.dto.ProductoDTO;
 import backend_ferreteria.los_maestros.producto.model.Producto;
 import backend_ferreteria.los_maestros.producto.repository.ProductoRepository;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import java.util.Locale;
 
 @Service
-public class ProductoService {
+public class ProductoService implements ProductoApi {
 
     private final ProductoRepository productoRepository;
 
@@ -22,29 +24,24 @@ public class ProductoService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductoDTO> listarTodos() {
-        return productoRepository.findAll().stream()
-                .map(this::toDTO)
-                .toList();
+    public Page<ProductoDTO> listar(Pageable pageable) {
+        return productoRepository.findAll(pageable).map(this::toDTO);
     }
 
+    @Override
     @Transactional(readOnly = true)
     public ProductoDTO obtenerPorSku(String sku) {
         return toDTO(buscarPorSku(sku));
     }
 
     @Transactional(readOnly = true)
-    public List<ProductoDTO> listarPorCategoria(String categoria) {
-        return productoRepository.findByCategoria(categoria).stream()
-                .map(this::toDTO)
-                .toList();
+    public Page<ProductoDTO> listarPorCategoria(String categoria, Pageable pageable) {
+        return productoRepository.findByCategoriaIgnoreCase(categoria, pageable).map(this::toDTO);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductoDTO> listarPorMarca(String marca) {
-        return productoRepository.findByMarca(marca).stream()
-                .map(this::toDTO)
-                .toList();
+    public Page<ProductoDTO> listarPorMarca(String marca, Pageable pageable) {
+        return productoRepository.findByMarcaIgnoreCase(marca, pageable).map(this::toDTO);
     }
 
     @Transactional

@@ -3,25 +3,27 @@ package backend_ferreteria.los_maestros.user.controller;
 import backend_ferreteria.los_maestros.user.dto.UserDTO;
 import backend_ferreteria.los_maestros.user.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-
 @RestController
-@RequestMapping("api/usuarios")
+@RequestMapping("/api/usuarios")
 public class UserController {
+
     private final UserService userService;
 
-    public UserController(UserService userService){
+    public UserController(UserService userService) {
         this.userService = userService;
     }
 
     @GetMapping
-    public ResponseEntity<List<UserDTO>> listar() {
-        return ResponseEntity.ok(userService.listarTodos());
+    public ResponseEntity<PagedModel<UserDTO>> listar(
+            @PageableDefault(size = 20, sort = "nombre") Pageable pageable) {
+        return ResponseEntity.ok(new PagedModel<>(userService.listar(pageable)));
     }
 
     @GetMapping("/{id}")

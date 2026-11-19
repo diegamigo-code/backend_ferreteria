@@ -119,6 +119,48 @@ class InventarioServiceTest {
     }
 
     @Test
+    void descontarStockDeProductoSinInventarioLanzaConflicto() {
+        String sku = DatosDePrueba.sku();
+        when(inventarioRepository.findById(sku)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> inventarioService.descontarStock(sku, 1))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+    }
+
+    @Test
+    void descontarStockResta() {
+        Inventario inventario = DatosDePrueba.inventario(DatosDePrueba.producto(), 10, 3);
+        when(inventarioRepository.findById(inventario.getSku())).thenReturn(Optional.of(inventario));
+
+        inventarioService.descontarStock(inventario.getSku().toLowerCase(), 4);
+
+        assertThat(inventario.getCantidad()).isEqualTo(6);
+        verify(inventarioRepository).saveAndFlush(inventario);
+    }
+
+    @Test
+    void reponerStockSuma() {
+        Inventario inventario = DatosDePrueba.inventario(DatosDePrueba.producto(), 10, 3);
+        when(inventarioRepository.findById(inventario.getSku())).thenReturn(Optional.of(inventario));
+
+        inventarioService.reponerStock(inventario.getSku(), 7);
+
+        assertThat(inventario.getCantidad()).isEqualTo(17);
+    }
+
+    @Test
+    void reponerStockDeProductoSinInventarioNoFalla() {
+        String sku = DatosDePrueba.sku();
+        when(inventarioRepository.findById(sku)).thenReturn(Optional.empty());
+
+        inventarioService.reponerStock(sku, 5);
+
+        verify(inventarioRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
     void actualizarConOtroSkuEnElBodyLanzaBadRequest() {
         Inventario inventario = DatosDePrueba.inventario(DatosDePrueba.producto(), 10, 3);
         InventarioDTO dto = new InventarioDTO(DatosDePrueba.sku(), null, 20, 5, null, null);

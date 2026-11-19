@@ -10,6 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -38,15 +41,17 @@ class ProductoControllerTest {
     private ProductoService productoService;
 
     @Test
-    void listarDevuelveLosProductosSinId() throws Exception {
+    void listarDevuelveUnaPaginaDeProductosSinId() throws Exception {
         List<ProductoDTO> productos = Stream.generate(DatosDePrueba::productoDTO).limit(3).toList();
-        when(productoService.listarTodos()).thenReturn(productos);
+        when(productoService.listar(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(productos, PageRequest.of(0, 20), 3));
 
         mockMvc.perform(get("/api/productos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
-                .andExpect(jsonPath("$[0].sku").value(productos.get(0).getSku()))
-                .andExpect(jsonPath("$[0].id").doesNotExist());
+                .andExpect(jsonPath("$.content.length()").value(3))
+                .andExpect(jsonPath("$.content[0].sku").value(productos.get(0).getSku()))
+                .andExpect(jsonPath("$.content[0].id").doesNotExist())
+                .andExpect(jsonPath("$.page.totalElements").value(3));
     }
 
     @Test
@@ -66,7 +71,7 @@ class ProductoControllerTest {
     void crearProductoInvalidoDevuelve400ConErroresPorCampo() throws Exception {
         ProductoDTO dto = DatosDePrueba.productoDTO();
         dto.setNombre("");
-        dto.setPrecio(-1.0);
+        dto.setPrecio(-1L);
         dto.setSku("SKU CON ESPACIOS!");
 
         mockMvc.perform(post("/api/productos")

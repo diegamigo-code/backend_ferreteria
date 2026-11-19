@@ -1,0 +1,101 @@
+package backend_ferreteria.los_maestros.factura.controller;
+
+import backend_ferreteria.los_maestros.compartido.SecurityConfig;
+import backend_ferreteria.los_maestros.compartido.config.CorsConfig;
+import backend_ferreteria.los_maestros.factura.dto.EmitirFacturaDTO;
+import backend_ferreteria.los_maestros.factura.dto.FacturaDTO;
+import backend_ferreteria.los_maestros.factura.dto.LineaFacturaDTO;
+import backend_ferreteria.los_maestros.factura.model.EstadoFactura;
+import backend_ferreteria.los_maestros.factura.service.FacturaService;
+import backend_ferreteria.los_maestros.soporte.DatosDePrueba;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(ControllerFactura.class)
+@Import({SecurityConfig.class, CorsConfig.class})
+class ControllerFacturaTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private FacturaService facturaService;
+
+    @Test
+    void emitirDevuelve201ConLaFactura() throws Exception {
+        String sku = DatosDePrueba.sku();
+        long precio = DatosDePrueba.precio();
+        FacturaDTO factura = new FacturaDTO(15L, LocalDateTime.now(), EstadoFactura.EMITIDA, 3L,
+                DatosDePrueba.faker().name().fullName(), DatosDePrueba.email(),
+                List.of(new LineaFacturaDTO(sku, DatosDePrueba.nombre(), precio, 2, precio * 2)),
+                0L, 0L, precio * 2, null);
+        when(facturaService.emitir(any(EmitirFacturaDTO.class))).thenReturn(factura);
+
+        mockMvc.perform(post("/api/facturas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + sku + "\",\"cantidad\":2}]}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numero").value(15))
+                .andExpect(jsonPath("$.estado").value("EMITIDA"))
+                .andExpect(jsonPath("$.lineas[0].sku").value(sku))
+                .andExpect(jsonPath("$.total").value(precio * 2));
+    }
+
+    @Test
+    void emitirSinLineasDevuelve400() throws Exception {
+        mockMvc.perform(post("/api/facturas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":3,\"lineas\":[]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores.lineas").exists());
+        verifyNoInteractions(facturaService);
+    }
+
+    @Test
+    void emitirConCantidadCeroDevuelve400() throws Exception {
+        mockMvc.perform(post("/api/facturas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":0}]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errores['lineas[0].cantidad']").exists());
+        verifyNoInteractions(facturaService);
+    }
+
+    @Test
+    void emitirSinStockDevuelve409() throws Exception {
+        when(facturaService.emitir(any(EmitirFacturaDTO.class)))
+                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Stock insuficiente"));
+
+        mockMvc.perform(post("/api/facturas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":9}]}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("Stock insuficiente"));
+    }
+
+    @Test
+    void anularFacturaYaAnuladaDevuelve409() throws Exception {
+        when(facturaService.anular(15L))
+                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "La factura 15 ya está anulada"));
+
+        mockMvc.perform(post("/api/facturas/15/anular"))
+                .andExpect(status().isConflict());
+    }
+}

@@ -11,6 +11,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -35,14 +39,15 @@ class ProductoServiceTest {
     private ProductoService productoService;
 
     @Test
-    void listarTodosDevuelveUnDtoPorProducto() {
+    void listarDevuelveUnaPaginaDeDtos() {
         List<Producto> productos = Stream.generate(DatosDePrueba::producto).limit(5).toList();
-        when(productoRepository.findAll()).thenReturn(productos);
+        Pageable pagina = PageRequest.of(0, 20);
+        when(productoRepository.findAll(pagina)).thenReturn(new PageImpl<>(productos, pagina, 5));
 
-        List<ProductoDTO> resultado = productoService.listarTodos();
+        Page<ProductoDTO> resultado = productoService.listar(pagina);
 
-        assertThat(resultado).hasSize(5);
-        assertThat(resultado).extracting(ProductoDTO::getSku)
+        assertThat(resultado.getTotalElements()).isEqualTo(5);
+        assertThat(resultado.getContent()).extracting(ProductoDTO::getSku)
                 .containsExactlyElementsOf(productos.stream().map(Producto::getSku).toList());
     }
 

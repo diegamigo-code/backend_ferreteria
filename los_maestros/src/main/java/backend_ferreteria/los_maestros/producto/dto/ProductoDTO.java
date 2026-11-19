@@ -35,7 +35,7 @@ public class ProductoDTO {
 
     @NotNull
     @PositiveOrZero
-    private Double precio;
+    private Long precio;
 
     @NotBlank
     @Size(max = 1000)
