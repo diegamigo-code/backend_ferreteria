@@ -1,8 +1,10 @@
 package backend_ferreteria.los_maestros.inventario.model;
 
+import backend_ferreteria.los_maestros.compartido.listener.AuditoriaListener;
 import backend_ferreteria.los_maestros.producto.model.Producto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -27,6 +29,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
+@EntityListeners(AuditoriaListener.class)
 @Table(name = "inventario")
 public class Inventario {
 

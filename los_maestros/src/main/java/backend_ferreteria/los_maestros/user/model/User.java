@@ -1,5 +1,6 @@
 package backend_ferreteria.los_maestros.user.model;
 
+import backend_ferreteria.los_maestros.compartido.listener.AuditoriaListener;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -17,6 +18,7 @@ import java.util.Date;
 @Setter
 
 @Entity
+@EntityListeners(AuditoriaListener.class)
 @Table(name = "usuarios")
 public class User {
     @Id

@@ -1,9 +1,9 @@
 package backend_ferreteria.los_maestros.producto.model;
 
+import backend_ferreteria.los_maestros.compartido.listener.AuditoriaListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
@@ -21,17 +21,15 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
+@EntityListeners(AuditoriaListener.class)
 @Table(name = "productos")
 public class Producto {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     @NotBlank
     @Size(max = 50)
     @Pattern(regexp = "^[A-Z0-9-]+$")
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = false, length = 50)
     private String sku;
 
     @NotBlank
