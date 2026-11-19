@@ -41,6 +41,7 @@ class UserServiceTest {
         when(userRepository.existsByEmailIgnoreCase(emailEsperado)).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
+            assertThat(u.getId()).isNull();
             u.setId(1L);
             return u;
         });
@@ -49,7 +50,6 @@ class UserServiceTest {
 
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
-        assertThat(captor.getValue().getId()).isNull();
         assertThat(captor.getValue().getEmail()).isEqualTo(emailEsperado);
         assertThat(resultado.getId()).isEqualTo(1L);
         assertThat(resultado.getFechaNacimiento()).isEqualTo(dto.getFechaNacimiento());
