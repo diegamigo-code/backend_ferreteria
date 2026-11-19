@@ -40,7 +40,7 @@ public class Inventario {
     @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "producto_sku")
-    @OnDelete(action = OnDeleteAction.CASCADE) // si se elimina el producto, se elimina su inventario
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private Producto producto;
 
     @NotNull
@@ -48,7 +48,6 @@ public class Inventario {
     @Column(nullable = false)
     private Integer cantidad;
 
-    /** Bajo este número (o igual) el producto se considera con stock bajo. */
     @NotNull
     @PositiveOrZero
     @Column(name = "stock_minimo", nullable = false)
@@ -58,7 +57,6 @@ public class Inventario {
     @Column(name = "ultima_actualizacion", nullable = false)
     private LocalDateTime ultimaActualizacion;
 
-    /** Bloqueo optimista: evita que dos movimientos simultáneos pisen el stock. */
     @Version
     private Long version;
 

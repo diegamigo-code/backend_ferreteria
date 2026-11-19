@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 
 public interface AuditoriaRepository extends JpaRepository<Auditoria, Long> {
 
-    // Cada filtro es opcional: si llega null, no se aplica.
     @Query("""
             select a from Auditoria a
             where (:entidad is null or lower(a.entidad) = lower(:entidad))

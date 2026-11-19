@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 
-// Solo lectura: los registros los crea AuditoriaListener automáticamente.
 @RestController
 @RequestMapping("/api/auditoria")
 public class AuditoriaController {
@@ -27,7 +26,6 @@ public class AuditoriaController {
         this.auditoriaService = auditoriaService;
     }
 
-    // Ej: /api/auditoria?entidad=Producto&entidadId=MART-001&accion=ACTUALIZAR&desde=2026-11-01T00:00:00&page=0&size=20
     @GetMapping
     public ResponseEntity<PagedModel<AuditoriaDTO>> buscar(
             @RequestParam(required = false) String entidad,

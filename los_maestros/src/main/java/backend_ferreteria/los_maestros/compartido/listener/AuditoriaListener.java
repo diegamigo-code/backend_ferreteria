@@ -17,14 +17,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-// Se activa en una entidad con @EntityListeners(AuditoriaListener.class).
-// Guarda el registro solo si la transacción hace commit: si hay rollback, no queda nada auditado.
 @Component
 public class AuditoriaListener {
 
     private static final Logger log = LoggerFactory.getLogger(AuditoriaListener.class);
 
-    // ObjectProvider (lazy) para evitar una dependencia circular con el EntityManagerFactory al arrancar.
     private final ObjectProvider<AuditoriaApi> auditoriaApi;
     private final ObjectProvider<EntityManagerFactory> entityManagerFactory;
 
@@ -59,7 +56,6 @@ public class AuditoriaListener {
             try {
                 auditoriaApi.getObject().registrar(nombre, entidadId, accion, usuario);
             } catch (RuntimeException ex) {
-                // Un fallo de auditoría no debe romper la operación que ya se guardó.
                 log.error("No se pudo registrar auditoría {} {} {}", accion, nombre, entidadId, ex);
             }
         };

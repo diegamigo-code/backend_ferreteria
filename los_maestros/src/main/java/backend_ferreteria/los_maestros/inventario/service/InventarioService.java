@@ -45,7 +45,6 @@ public class InventarioService {
         return toDTO(buscarPorSku(sku));
     }
 
-    /** Crea el registro de inventario de un producto que ya existe. */
     @Transactional
     public InventarioDTO crear(InventarioDTO dto) {
         String sku = normalizarSku(dto.getSku());
@@ -59,13 +58,12 @@ public class InventarioService {
         }
 
         Inventario inventario = new Inventario();
-        inventario.setProducto(producto); // @MapsId copia el SKU del producto
+        inventario.setProducto(producto);
         inventario.setCantidad(dto.getCantidad());
         inventario.setStockMinimo(dto.getStockMinimo());
         return toDTO(inventarioRepository.saveAndFlush(inventario));
     }
 
-    /** Fija la cantidad y el stock mínimo (por ejemplo, después de un conteo físico). */
     @Transactional
     public InventarioDTO actualizar(String sku, InventarioDTO dto) {
         Inventario inventario = buscarPorSku(sku);
@@ -80,7 +78,6 @@ public class InventarioService {
         return toDTO(inventarioRepository.saveAndFlush(inventario));
     }
 
-    /** Suma unidades al stock (compra, devolución, etc.). */
     @Transactional
     public InventarioDTO registrarEntrada(String sku, int cantidad) {
         Inventario inventario = buscarPorSku(sku);
@@ -88,7 +85,6 @@ public class InventarioService {
         return toDTO(inventarioRepository.saveAndFlush(inventario));
     }
 
-    /** Resta unidades del stock (venta, merma, etc.). No permite dejar el stock en negativo. */
     @Transactional
     public InventarioDTO registrarSalida(String sku, int cantidad) {
         Inventario inventario = buscarPorSku(sku);
@@ -112,7 +108,6 @@ public class InventarioService {
                 .orElseThrow(() -> new EntityNotFoundException("No hay inventario para el SKU " + skuNormalizado));
     }
 
-    /** Mismo criterio que ProductoService: SKU en mayúsculas y sin espacios. */
     private String normalizarSku(String sku) {
         return sku == null ? null : sku.trim().toUpperCase(Locale.ROOT);
     }

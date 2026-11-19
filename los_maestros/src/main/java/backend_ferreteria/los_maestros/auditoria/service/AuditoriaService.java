@@ -24,7 +24,6 @@ public class AuditoriaService implements AuditoriaApi {
         this.auditoriaRepository = auditoriaRepository;
     }
 
-    // REQUIRES_NEW: se llama después del commit de la operación auditada, en su propia transacción.
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrar(String entidad, String entidadId, AccionAuditoria accion, String usuario) {

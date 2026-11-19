@@ -61,7 +61,6 @@ public class ProductoService {
     public ProductoDTO actualizar(String sku, ProductoDTO dto) {
         Producto producto = buscarPorSku(sku);
 
-        // El SKU es la clave primaria: no se puede cambiar. Para "renombrarlo" hay que crear otro producto.
         if (!producto.getSku().equals(normalizarSku(dto.getSku()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "El SKU del body no coincide con el de la URL; el SKU no se puede modificar");
@@ -86,7 +85,6 @@ public class ProductoService {
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado con SKU " + skuNormalizado));
     }
 
-    /** Guarda los SKU siempre en mayúsculas y sin espacios, para que "mart-001" y "MART-001" sean el mismo. */
     private String normalizarSku(String sku) {
         return sku == null ? null : sku.trim().toUpperCase(Locale.ROOT);
     }

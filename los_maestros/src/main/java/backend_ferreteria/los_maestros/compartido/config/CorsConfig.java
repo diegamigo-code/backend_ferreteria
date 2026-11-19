@@ -8,10 +8,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/**
- * CORS para desarrollo: permite que un frontend corriendo en localhost
- * (cualquier puerto: React 3000, Vite 5173, Angular 4200, etc.) llame a la API.
- */
 @Configuration
 public class CorsConfig {
 

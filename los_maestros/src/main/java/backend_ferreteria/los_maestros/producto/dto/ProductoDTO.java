@@ -10,9 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Datos públicos de un producto. El SKU es su identificador.
- */
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter

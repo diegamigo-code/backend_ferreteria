@@ -5,11 +5,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-/**
- * Cuerpo JSON que devuelve la API cuando algo sale mal.
- *
- * @param errores detalle por campo (solo en errores de validación)
- */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ErrorResponse(
         LocalDateTime timestamp,
