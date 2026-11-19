@@ -4,6 +4,8 @@ import backend_ferreteria.los_maestros.compartido.listener.AuditoriaListener;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -49,4 +51,13 @@ public class User {
     @NotBlank
     @Column(nullable = false, length = 255)
     private String direccion;
+
+    @NotBlank
+    @Column(nullable = false, length = 100)
+    private String password;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Rol rol;
 }

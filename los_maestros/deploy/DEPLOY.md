@@ -57,6 +57,7 @@ sudo systemctl enable --now los-maestros-backend
 curl http://localhost:8080/actuator/health          # {"status":"UP"}
 ```
 
+- Login: `POST http://<IP-PUBLICA>:8080/api/auth/login` con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `app.env`
 - API: `http://<IP-PUBLICA>:8080/api/productos`
 - Swagger: `http://<IP-PUBLICA>:8080/swagger-ui.html`
 

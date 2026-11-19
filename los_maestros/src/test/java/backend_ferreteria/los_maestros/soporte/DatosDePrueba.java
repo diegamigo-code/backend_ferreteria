@@ -60,13 +60,19 @@ public final class DatosDePrueba {
                 + FAKER.options().option("gmail.com", "outlook.com", "ferreteria.cl");
     }
 
+    public static String password() {
+        return FAKER.regexify("[a-z]{4}[A-Z]{4}[0-9]{4}");
+    }
+
     public static UserDTO usuarioDTO() {
         return new UserDTO(
                 null,
                 recortar(FAKER.name().fullName(), 100),
                 email(),
                 FAKER.timeAndDate().birthday(18, 80),
-                recortar(FAKER.address().fullAddress(), 255)
+                recortar(FAKER.address().fullAddress(), 255),
+                password(),
+                null
         );
     }
 

@@ -2,12 +2,14 @@ package backend_ferreteria.los_maestros.user.service;
 
 import backend_ferreteria.los_maestros.user.UsuarioApi;
 import backend_ferreteria.los_maestros.user.dto.UserDTO;
+import backend_ferreteria.los_maestros.user.model.Rol;
 import backend_ferreteria.los_maestros.user.model.User;
 import backend_ferreteria.los_maestros.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -18,9 +20,11 @@ import java.util.Locale;
 public class UserService implements UsuarioApi {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -34,14 +38,24 @@ public class UserService implements UsuarioApi {
         return toDTO(buscarPorId(id));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public UserDTO obtenerPorEmail(String email) {
+        String normalizado = normalizarEmail(email);
+        return userRepository.findByEmailIgnoreCase(normalizado)
+                .map(this::toDTO)
+                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado con email " + normalizado));
+    }
+
+    @Override
+    @Transactional
+    public UserDTO registrar(UserDTO dto) {
+        return guardarNuevo(dto, Rol.CLIENTE);
+    }
+
     @Transactional
     public UserDTO crear(UserDTO dto) {
-        String email = normalizarEmail(dto.getEmail());
-        if (userRepository.existsByEmailIgnoreCase(email)) {
-            throw emailRepetido(email);
-        }
-        User user = new User(null, dto.getNombre(), email, dto.getFechaNacimiento(), dto.getDireccion());
-        return toDTO(userRepository.save(user));
+        return guardarNuevo(dto, dto.getRol() != null ? dto.getRol() : Rol.CLIENTE);
     }
 
     @Transactional
@@ -55,12 +69,31 @@ public class UserService implements UsuarioApi {
         user.setEmail(email);
         user.setFechaNacimiento(dto.getFechaNacimiento());
         user.setDireccion(dto.getDireccion());
+        if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+        if (dto.getRol() != null) {
+            user.setRol(dto.getRol());
+        }
         return toDTO(userRepository.save(user));
     }
 
     @Transactional
     public void eliminar(Long id) {
         userRepository.delete(buscarPorId(id));
+    }
+
+    private UserDTO guardarNuevo(UserDTO dto, Rol rol) {
+        if (dto.getPassword() == null || dto.getPassword().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña es obligatoria");
+        }
+        String email = normalizarEmail(dto.getEmail());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw emailRepetido(email);
+        }
+        User user = new User(null, dto.getNombre(), email, dto.getFechaNacimiento(), dto.getDireccion(),
+                passwordEncoder.encode(dto.getPassword()), rol);
+        return toDTO(userRepository.save(user));
     }
 
     private User buscarPorId(Long id) {
@@ -82,7 +115,9 @@ public class UserService implements UsuarioApi {
                 user.getNombre(),
                 user.getEmail(),
                 user.getFechaNacimiento(),
-                user.getDireccion()
+                user.getDireccion(),
+                null,
+                user.getRol()
         );
     }
 }

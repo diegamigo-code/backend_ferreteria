@@ -2,6 +2,7 @@ package backend_ferreteria.los_maestros.producto.controller;
 
 import backend_ferreteria.los_maestros.compartido.SecurityConfig;
 import backend_ferreteria.los_maestros.compartido.config.CorsConfig;
+import backend_ferreteria.los_maestros.compartido.config.JwtConfig;
 import backend_ferreteria.los_maestros.producto.dto.ProductoDTO;
 import backend_ferreteria.los_maestros.producto.service.ProductoService;
 import backend_ferreteria.los_maestros.soporte.DatosDePrueba;
@@ -15,15 +16,19 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ProductoController.class)
-@Import({SecurityConfig.class, CorsConfig.class})
+@Import({SecurityConfig.class, JwtConfig.class, CorsConfig.class})
 class ProductoControllerTest {
 
     @Autowired
@@ -59,7 +64,7 @@ class ProductoControllerTest {
         ProductoDTO dto = DatosDePrueba.productoDTO();
         when(productoService.crear(any(ProductoDTO.class))).thenReturn(dto);
 
-        mockMvc.perform(post("/api/productos")
+        mockMvc.perform(post("/api/productos").with(admin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(dto)))
                 .andExpect(status().isCreated())
@@ -74,7 +79,7 @@ class ProductoControllerTest {
         dto.setPrecio(-1L);
         dto.setSku("SKU CON ESPACIOS!");
 
-        mockMvc.perform(post("/api/productos")
+        mockMvc.perform(post("/api/productos").with(admin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(dto)))
                 .andExpect(status().isBadRequest())
@@ -86,7 +91,7 @@ class ProductoControllerTest {
 
     @Test
     void crearConJsonMalFormadoDevuelve400() throws Exception {
-        mockMvc.perform(post("/api/productos")
+        mockMvc.perform(post("/api/productos").with(admin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"sku\": "))
                 .andExpect(status().isBadRequest());
@@ -98,7 +103,7 @@ class ProductoControllerTest {
         when(productoService.crear(any(ProductoDTO.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un producto con SKU " + dto.getSku()));
 
-        mockMvc.perform(post("/api/productos")
+        mockMvc.perform(post("/api/productos").with(admin())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json(dto)))
                 .andExpect(status().isConflict())
@@ -119,8 +124,33 @@ class ProductoControllerTest {
 
     @Test
     void eliminarDevuelve204() throws Exception {
-        mockMvc.perform(delete("/api/productos/{sku}", DatosDePrueba.sku()))
+        mockMvc.perform(delete("/api/productos/{sku}", DatosDePrueba.sku()).with(admin()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void crearSinTokenDevuelve401() throws Exception {
+        mockMvc.perform(post("/api/productos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(DatosDePrueba.productoDTO())))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
+        verifyNoInteractions(productoService);
+    }
+
+    @Test
+    void crearComoClienteDevuelve403() throws Exception {
+        mockMvc.perform(post("/api/productos")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CLIENTE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(DatosDePrueba.productoDTO())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403));
+        verifyNoInteractions(productoService);
+    }
+
+    private static RequestPostProcessor admin() {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN"));
     }
 
     private static String json(ProductoDTO dto) {

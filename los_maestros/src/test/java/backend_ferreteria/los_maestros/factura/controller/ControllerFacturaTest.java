@@ -2,6 +2,7 @@ package backend_ferreteria.los_maestros.factura.controller;
 
 import backend_ferreteria.los_maestros.compartido.SecurityConfig;
 import backend_ferreteria.los_maestros.compartido.config.CorsConfig;
+import backend_ferreteria.los_maestros.compartido.config.JwtConfig;
 import backend_ferreteria.los_maestros.factura.dto.EmitirFacturaDTO;
 import backend_ferreteria.los_maestros.factura.dto.FacturaDTO;
 import backend_ferreteria.los_maestros.factura.dto.LineaFacturaDTO;
@@ -14,8 +15,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -24,12 +27,13 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(ControllerFactura.class)
-@Import({SecurityConfig.class, CorsConfig.class})
+@Import({SecurityConfig.class, JwtConfig.class, CorsConfig.class})
 class ControllerFacturaTest {
 
     @Autowired
@@ -48,7 +52,7 @@ class ControllerFacturaTest {
                 0L, 0L, precio * 2, null);
         when(facturaService.emitir(any(EmitirFacturaDTO.class))).thenReturn(factura);
 
-        mockMvc.perform(post("/api/facturas")
+        mockMvc.perform(post("/api/facturas").with(vendedor())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + sku + "\",\"cantidad\":2}]}"))
                 .andExpect(status().isCreated())
@@ -60,7 +64,7 @@ class ControllerFacturaTest {
 
     @Test
     void emitirSinLineasDevuelve400() throws Exception {
-        mockMvc.perform(post("/api/facturas")
+        mockMvc.perform(post("/api/facturas").with(vendedor())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"usuarioId\":3,\"lineas\":[]}"))
                 .andExpect(status().isBadRequest())
@@ -70,7 +74,7 @@ class ControllerFacturaTest {
 
     @Test
     void emitirConCantidadCeroDevuelve400() throws Exception {
-        mockMvc.perform(post("/api/facturas")
+        mockMvc.perform(post("/api/facturas").with(vendedor())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":0}]}"))
                 .andExpect(status().isBadRequest())
@@ -83,7 +87,7 @@ class ControllerFacturaTest {
         when(facturaService.emitir(any(EmitirFacturaDTO.class)))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Stock insuficiente"));
 
-        mockMvc.perform(post("/api/facturas")
+        mockMvc.perform(post("/api/facturas").with(vendedor())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":9}]}"))
                 .andExpect(status().isConflict())
@@ -95,7 +99,30 @@ class ControllerFacturaTest {
         when(facturaService.anular(15L))
                 .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "La factura 15 ya está anulada"));
 
-        mockMvc.perform(post("/api/facturas/15/anular"))
+        mockMvc.perform(post("/api/facturas/15/anular").with(vendedor()))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void emitirSinTokenDevuelve401() throws Exception {
+        mockMvc.perform(post("/api/facturas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":1}]}"))
+                .andExpect(status().isUnauthorized());
+        verifyNoInteractions(facturaService);
+    }
+
+    @Test
+    void emitirComoClienteDevuelve403() throws Exception {
+        mockMvc.perform(post("/api/facturas")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CLIENTE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":1}]}"))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(facturaService);
+    }
+
+    private static RequestPostProcessor vendedor() {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_VENDEDOR"));
     }
 }
