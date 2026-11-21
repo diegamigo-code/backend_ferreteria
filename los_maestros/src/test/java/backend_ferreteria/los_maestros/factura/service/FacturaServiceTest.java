@@ -1,10 +1,13 @@
 package backend_ferreteria.los_maestros.factura.service;
 
+import backend_ferreteria.los_maestros.credito.CreditoApi;
 import backend_ferreteria.los_maestros.factura.dto.EmitirFacturaDTO;
 import backend_ferreteria.los_maestros.factura.dto.FacturaDTO;
 import backend_ferreteria.los_maestros.factura.dto.LineaSolicitudDTO;
 import backend_ferreteria.los_maestros.factura.model.EstadoFactura;
+import backend_ferreteria.los_maestros.factura.model.EstadoPedido;
 import backend_ferreteria.los_maestros.factura.model.Factura;
+import backend_ferreteria.los_maestros.factura.model.FormaPago;
 import backend_ferreteria.los_maestros.factura.model.LineaFactura;
 import backend_ferreteria.los_maestros.factura.repository.RepositoryFactura;
 import backend_ferreteria.los_maestros.inventario.InventarioApi;
@@ -13,6 +16,7 @@ import backend_ferreteria.los_maestros.producto.dto.ProductoDTO;
 import backend_ferreteria.los_maestros.soporte.DatosDePrueba;
 import backend_ferreteria.los_maestros.user.UsuarioApi;
 import backend_ferreteria.los_maestros.user.dto.UserDTO;
+import backend_ferreteria.los_maestros.user.model.Rol;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +34,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,6 +56,9 @@ class FacturaServiceTest {
 
     @Mock
     private InventarioApi inventarioApi;
+
+    @Mock
+    private CreditoApi creditoApi;
 
     @InjectMocks
     private FacturaService facturaService;
@@ -163,6 +172,91 @@ class FacturaServiceTest {
 
         assertThatThrownBy(() -> facturaService.obtenerPorNumero(7L))
                 .isInstanceOf(EntityNotFoundException.class);
+    }
+
+    @Test
+    void emitirSinFormaDePagoQuedaPagadaConWebpay() {
+        UserDTO cliente = cliente();
+        ProductoDTO producto = producto(1_000L);
+        when(usuarioApi.obtenerPorId(cliente.getId())).thenReturn(cliente);
+        when(productoApi.obtenerPorSku(producto.getSku())).thenReturn(producto);
+        when(repositoryFactura.save(any(Factura.class))).thenAnswer(inv -> guardada(inv.getArgument(0)));
+
+        FacturaDTO factura = facturaService.emitir(new EmitirFacturaDTO(cliente.getId(),
+                List.of(new LineaSolicitudDTO(producto.getSku(), 1))));
+
+        assertThat(factura.getFormaPago()).isEqualTo(FormaPago.WEBPAY);
+        assertThat(factura.getPagada()).isTrue();
+        assertThat(factura.getEstadoPedido()).isEqualTo(EstadoPedido.PENDIENTE);
+        assertThat(factura.getVence()).isNull();
+        verify(creditoApi, never()).cargar(anyLong(), anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    void emitirACreditoCargaLaCuentaDelContratista() {
+        UserDTO contratista = cliente();
+        contratista.setRol(Rol.CONTRATISTA);
+        ProductoDTO producto = producto(10_000L);
+        when(usuarioApi.obtenerPorId(contratista.getId())).thenReturn(contratista);
+        when(productoApi.obtenerPorSku(producto.getSku())).thenReturn(producto);
+        when(repositoryFactura.save(any(Factura.class))).thenAnswer(inv -> guardada(inv.getArgument(0)));
+
+        FacturaDTO factura = facturaService.emitir(new EmitirFacturaDTO(contratista.getId(),
+                List.of(new LineaSolicitudDTO(producto.getSku(), 3)), FormaPago.CREDITO, "Despacho a obra"));
+
+        assertThat(factura.getPagada()).isFalse();
+        assertThat(factura.getVence()).isNotNull();
+        assertThat(factura.getEntrega()).isEqualTo("Despacho a obra");
+        verify(creditoApi).cargar(eq(contratista.getId()), eq(30_000L), eq("F-1"), anyString());
+    }
+
+    @Test
+    void emitirACreditoSiendoClienteDevuelve400() {
+        UserDTO cliente = cliente();
+        cliente.setRol(Rol.CLIENTE);
+        when(usuarioApi.obtenerPorId(cliente.getId())).thenReturn(cliente);
+
+        assertThatThrownBy(() -> facturaService.emitir(new EmitirFacturaDTO(cliente.getId(),
+                List.of(new LineaSolicitudDTO(DatosDePrueba.sku(), 1)), FormaPago.CREDITO, null)))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(inventarioApi, never()).descontarStock(anyString(), anyInt());
+    }
+
+    @Test
+    void pagarFacturaACreditoAbonaYLaMarcaPagada() {
+        Factura factura = facturaEmitida();
+        factura.setFormaPago(FormaPago.CREDITO);
+        factura.setPagada(false);
+        when(repositoryFactura.findById(1L)).thenReturn(Optional.of(factura));
+        when(repositoryFactura.saveAndFlush(factura)).thenReturn(factura);
+
+        FacturaDTO pagada = facturaService.pagar(1L);
+
+        assertThat(pagada.getPagada()).isTrue();
+        verify(creditoApi).abonar(eq(1L), eq(factura.getTotal()), eq("Pago F-1"), anyString());
+    }
+
+    @Test
+    void anularFacturaACreditoPendienteDevuelveElCupo() {
+        Factura factura = facturaEmitida();
+        factura.setFormaPago(FormaPago.CREDITO);
+        factura.setPagada(false);
+        when(repositoryFactura.findById(1L)).thenReturn(Optional.of(factura));
+        when(repositoryFactura.saveAndFlush(factura)).thenReturn(factura);
+
+        facturaService.anular(1L);
+
+        verify(creditoApi).abonar(eq(1L), eq(factura.getTotal()), anyString(), anyString());
+    }
+
+    @Test
+    void cambiarEstadoDelPedido() {
+        Factura factura = facturaEmitida();
+        when(repositoryFactura.findById(1L)).thenReturn(Optional.of(factura));
+        when(repositoryFactura.saveAndFlush(factura)).thenReturn(factura);
+
+        assertThat(facturaService.cambiarEstadoPedido(1L, EstadoPedido.EN_REPARTO).getEstadoPedido())
+                .isEqualTo(EstadoPedido.EN_REPARTO);
     }
 
     private static UserDTO cliente() {

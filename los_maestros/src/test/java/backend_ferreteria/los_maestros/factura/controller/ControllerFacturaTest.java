@@ -9,6 +9,8 @@ import backend_ferreteria.los_maestros.factura.dto.LineaFacturaDTO;
 import backend_ferreteria.los_maestros.factura.model.EstadoFactura;
 import backend_ferreteria.los_maestros.factura.service.FacturaService;
 import backend_ferreteria.los_maestros.soporte.DatosDePrueba;
+import backend_ferreteria.los_maestros.user.UsuarioApi;
+import backend_ferreteria.los_maestros.user.dto.UserDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -25,6 +27,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -42,6 +46,9 @@ class ControllerFacturaTest {
     @MockitoBean
     private FacturaService facturaService;
 
+    @MockitoBean
+    private UsuarioApi usuarioApi;
+
     @Test
     void emitirDevuelve201ConLaFactura() throws Exception {
         String sku = DatosDePrueba.sku();
@@ -49,7 +56,7 @@ class ControllerFacturaTest {
         FacturaDTO factura = new FacturaDTO(15L, LocalDateTime.now(), EstadoFactura.EMITIDA, 3L,
                 DatosDePrueba.faker().name().fullName(), DatosDePrueba.email(),
                 List.of(new LineaFacturaDTO(sku, DatosDePrueba.nombre(), precio, 2, precio * 2)),
-                0L, 0L, precio * 2, null);
+                0L, 0L, precio * 2, null, null, null, null, null, null);
         when(facturaService.emitir(any(EmitirFacturaDTO.class))).thenReturn(factura);
 
         mockMvc.perform(post("/api/facturas").with(vendedor())
@@ -113,11 +120,25 @@ class ControllerFacturaTest {
     }
 
     @Test
-    void emitirComoClienteDevuelve403() throws Exception {
+    void emitirComoClienteUsaSuPropioUsuario() throws Exception {
+        UserDTO cliente = DatosDePrueba.usuarioDTO();
+        cliente.setId(8L);
+        when(usuarioApi.obtenerPorEmail("cliente@correo.cl")).thenReturn(cliente);
+        when(facturaService.emitir(any(EmitirFacturaDTO.class))).thenReturn(new FacturaDTO());
+
         mockMvc.perform(post("/api/facturas")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CLIENTE")))
+                        .with(jwt().jwt(j -> j.subject("cliente@correo.cl"))
+                                .authorities(new SimpleGrantedAuthority("ROLE_CLIENTE")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"usuarioId\":3,\"lineas\":[{\"sku\":\"" + DatosDePrueba.sku() + "\",\"cantidad\":1}]}"))
+                .andExpect(status().isCreated());
+        verify(facturaService).emitir(argThat(s -> s.getUsuarioId() == 8L));
+    }
+
+    @Test
+    void anularComoClienteDevuelve403() throws Exception {
+        mockMvc.perform(post("/api/facturas/15/anular")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_CLIENTE"))))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(facturaService);
     }

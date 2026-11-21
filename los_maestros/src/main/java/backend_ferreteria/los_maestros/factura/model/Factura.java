@@ -21,6 +21,7 @@ import lombok.Setter;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -68,6 +69,21 @@ public class Factura {
 
     @Column(name = "fecha_anulacion")
     private LocalDateTime fechaAnulacion;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "forma_pago", length = 20)
+    private FormaPago formaPago;
+
+    @Column(length = 255)
+    private String entrega;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pedido", length = 30)
+    private EstadoPedido estadoPedido;
+
+    private LocalDate vence;
+
+    private Boolean pagada;
 
     @OneToMany(mappedBy = "factura", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id")

@@ -1,5 +1,6 @@
 package backend_ferreteria.los_maestros.factura.dto;
 
+import backend_ferreteria.los_maestros.factura.model.FormaPago;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -23,4 +24,13 @@ public class EmitirFacturaDTO {
     @NotEmpty
     @Size(max = 200)
     private List<@Valid @NotNull LineaSolicitudDTO> lineas;
+
+    private FormaPago formaPago;
+
+    @Size(max = 255)
+    private String entrega;
+
+    public EmitirFacturaDTO(Long usuarioId, List<LineaSolicitudDTO> lineas) {
+        this(usuarioId, lineas, null, null);
+    }
 }
