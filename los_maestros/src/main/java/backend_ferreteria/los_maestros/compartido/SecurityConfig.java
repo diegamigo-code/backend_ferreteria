@@ -58,6 +58,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/inventario/**").hasRole("ADMIN")
                         .requestMatchers("/api/inventario", "/api/inventario/**").hasAnyRole("ADMIN", "VENDEDOR")
                         .requestMatchers("/api/facturas", "/api/facturas/**").hasAnyRole("ADMIN", "VENDEDOR")
+                        .requestMatchers(HttpMethod.GET, "/api/credito/mio").hasRole("CONTRATISTA")
+                        .requestMatchers("/api/credito", "/api/credito/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
