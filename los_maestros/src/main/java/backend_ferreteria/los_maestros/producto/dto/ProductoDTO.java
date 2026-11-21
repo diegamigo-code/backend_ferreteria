@@ -40,4 +40,10 @@ public class ProductoDTO {
     @NotBlank
     @Size(max = 1000)
     private String descripcion;
+
+    @PositiveOrZero
+    private Long precioNormal;
+
+    @Size(max = 255)
+    private String imagen;
 }

@@ -43,16 +43,20 @@ public final class DatosDePrueba {
         return recortar(FAKER.lorem().sentence(15), 1000);
     }
 
+    public static String imagen() {
+        return "assets/" + FAKER.regexify("[a-z]{6,12}") + ".webp";
+    }
+
     public static int cantidad() {
         return FAKER.number().numberBetween(0, 500);
     }
 
     public static ProductoDTO productoDTO() {
-        return new ProductoDTO(sku(), nombre(), marca(), categoria(), precio(), descripcion());
+        return new ProductoDTO(sku(), nombre(), marca(), categoria(), precio(), descripcion(), null, imagen());
     }
 
     public static Producto producto() {
-        return new Producto(sku(), nombre(), marca(), categoria(), precio(), descripcion());
+        return new Producto(sku(), nombre(), marca(), categoria(), precio(), descripcion(), null, imagen());
     }
 
     public static String email() {

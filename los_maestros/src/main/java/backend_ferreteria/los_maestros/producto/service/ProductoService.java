@@ -68,6 +68,8 @@ public class ProductoService implements ProductoApi {
         producto.setCategoria(dto.getCategoria());
         producto.setPrecio(dto.getPrecio());
         producto.setDescripcion(dto.getDescripcion());
+        producto.setPrecioNormal(dto.getPrecioNormal());
+        producto.setImagen(dto.getImagen());
         return toDTO(productoRepository.save(producto));
     }
 
@@ -93,7 +95,9 @@ public class ProductoService implements ProductoApi {
                 producto.getMarca(),
                 producto.getCategoria(),
                 producto.getPrecio(),
-                producto.getDescripcion()
+                producto.getDescripcion(),
+                producto.getPrecioNormal(),
+                producto.getImagen()
         );
     }
 
@@ -104,7 +108,9 @@ public class ProductoService implements ProductoApi {
                 dto.getMarca(),
                 dto.getCategoria(),
                 dto.getPrecio(),
-                dto.getDescripcion()
+                dto.getDescripcion(),
+                dto.getPrecioNormal(),
+                dto.getImagen()
         );
     }
 }

@@ -56,4 +56,12 @@ public class Producto {
     @Size(max = 1000)
     @Column(nullable = false, length = 1000)
     private String descripcion;
+
+    @PositiveOrZero
+    @Column(name = "precio_normal")
+    private Long precioNormal;
+
+    @Size(max = 255)
+    @Column(length = 255)
+    private String imagen;
 }
