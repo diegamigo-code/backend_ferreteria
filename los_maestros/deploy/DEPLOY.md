@@ -13,12 +13,25 @@ gh run download --repo diegamigo-code/backend_ferreteria --dir artefacto
 ```
 
 El artefacto trae `app.jar`, `app.jar.sha256`, `app.env.example`,
-`los-maestros-backend.service`, este `DEPLOY.md` y `BUILD_INFO.txt`.
+`los-maestros-backend.service`, `Caddyfile`, `los-maestros-caddy.service`, este `DEPLOY.md` y `BUILD_INFO.txt`.
 
 ## 2. Preparar la EC2 (una sola vez)
 
 - AMI: Amazon Linux 2023, tipo `t2.micro`/`t3.micro`, key pair `vockey` (o la tuya).
-- Security group: entrada TCP **22** (tu IP) y TCP **8080** (0.0.0.0/0 o el origen del frontend).
+- Security group: entrada TCP **22** (tu IP), **80** y **443** (0.0.0.0/0). El 80 lo usa Let's Encrypt para validar el certificado.
+  El **8080** solo hace falta para probar antes de tener HTTPS.
+
+### Elastic IP (para que la IP no cambie al reiniciar el laboratorio)
+
+```bash
+ID_EC2=<id-de-la-instancia>
+ASIGNACION=$(aws ec2 allocate-address --domain vpc --query AllocationId --output text)
+aws ec2 associate-address --instance-id $ID_EC2 --allocation-id $ASIGNACION
+aws ec2 describe-addresses --allocation-ids $ASIGNACION --query 'Addresses[0].PublicIp' --output text
+```
+
+Con esa IP el dominio HTTPS queda como `54-12-34-56.sslip.io` (la IP con guiones). `sslip.io`
+resuelve ese nombre a la IP, así que no hace falta comprar un dominio.
 
 ```bash
 sudo dnf install -y java-21-amazon-corretto-headless
@@ -41,7 +54,7 @@ Desde tu equipo (con `labsuser.pem` descargado de *AWS Details*):
 ```bash
 cd artefacto/los-maestros-backend-*/
 sha256sum -c app.jar.sha256
-scp -i labsuser.pem app.jar app.env.example los-maestros-backend.service \
+scp -i labsuser.pem app.jar app.env.example los-maestros-backend.service Caddyfile los-maestros-caddy.service \
     ec2-user@<IP-PUBLICA>:/opt/los-maestros-backend/
 ```
 
@@ -57,9 +70,27 @@ sudo systemctl enable --now los-maestros-backend
 curl http://localhost:8080/actuator/health          # {"status":"UP"}
 ```
 
-- Login: `POST http://<IP-PUBLICA>:8080/api/auth/login` con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `app.env`
-- API: `http://<IP-PUBLICA>:8080/api/productos`
-- Swagger: `http://<IP-PUBLICA>:8080/swagger-ui.html`
+### HTTPS con Caddy
+
+Caddy recibe en el 443, saca solo el certificado de Let's Encrypt para `DOMINIO` y le pasa todo
+al backend en el 8080. Con HTTPS el frontend funciona tanto en S3 como en GitHub Pages.
+
+```bash
+curl -fL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o caddy
+sudo install -m 755 caddy /usr/local/bin/caddy
+sudo cp /opt/los-maestros-backend/los-maestros-caddy.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now los-maestros-caddy
+curl https://<ip-con-guiones>.sslip.io/actuator/health   # {"status":"UP"}
+```
+
+`DOMINIO` se lee de `app.env`. Logs: `journalctl -u los-maestros-caddy -f`.
+Si Let's Encrypt rechaza el certificado por límite de solicitudes del dominio `sslip.io`,
+se puede probar con `nip.io` (`54-12-34-56.nip.io`) cambiando `DOMINIO`.
+
+- Login: `POST https://<DOMINIO>/api/auth/login` con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `app.env`
+- API: `https://<DOMINIO>/api/productos`
+- Swagger: `https://<DOMINIO>/swagger-ui.html`
 
 ## 4. Primer uso
 
@@ -67,8 +98,9 @@ curl http://localhost:8080/actuator/health          # {"status":"UP"}
 2. Los contratistas se registran marcando "Soy contratista"; en **Panel → Usuarios** se les asigna el cupo de crédito.
 3. Los pagos de facturas a crédito se registran en **Panel → Pedidos → Registrar pago**.
 
-El frontend se publica en un bucket S3; los pasos están en el README del repo del frontend
-(sección *Despliegue en AWS*). La URL del bucket va en `CORS_ORIGIN`.
+El frontend se publica en un bucket S3 o en GitHub Pages; los pasos están en el README del repo
+del frontend (sección *Despliegue en AWS*). Las URLs del frontend van en `CORS_ORIGIN`, y
+`https://<DOMINIO>` va en el `config.js` del frontend.
 
 ## 5. Actualizar a una nueva versión
 
@@ -84,9 +116,7 @@ docker build -t los-maestros-backend .
 docker run -d -p 8080:8080 --env-file app.env los-maestros-backend
 ```
 
-> Al reiniciar el laboratorio la IP pública de la EC2 cambia: actualiza
-> la URL de la API en el frontend (y recompila) o asigna una Elastic IP.
-> Si el frontend se sirve por HTTPS (por ejemplo GitHub Pages), el navegador
-> bloquea las llamadas a `http://<IP>:8080`; con el frontend en un bucket S3
-> (website, `http://`) no hay ese problema.
+> Con la Elastic IP la dirección no cambia al reiniciar el laboratorio. Si igual cambia,
+> se actualiza `DOMINIO` en `app.env`, se reinicia Caddy y se cambia `config.js` del frontend
+> (no hace falta recompilar).
 > Logs: `journalctl -u los-maestros-backend -f`.
