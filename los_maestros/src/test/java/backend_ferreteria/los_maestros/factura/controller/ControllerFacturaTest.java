@@ -56,7 +56,7 @@ class ControllerFacturaTest {
         FacturaDTO factura = new FacturaDTO(15L, LocalDateTime.now(), EstadoFactura.EMITIDA, 3L,
                 DatosDePrueba.faker().name().fullName(), DatosDePrueba.email(),
                 List.of(new LineaFacturaDTO(sku, DatosDePrueba.nombre(), precio, 2, precio * 2)),
-                0L, 0L, precio * 2, null, null, null, null, null, null);
+                0L, 0L, precio * 2, null, null, null, null, null, null, null);
         when(facturaService.emitir(any(EmitirFacturaDTO.class))).thenReturn(factura);
 
         mockMvc.perform(post("/api/facturas").with(vendedor())

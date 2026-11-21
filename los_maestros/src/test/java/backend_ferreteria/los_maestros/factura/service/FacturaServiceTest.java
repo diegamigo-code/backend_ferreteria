@@ -202,12 +202,35 @@ class FacturaServiceTest {
         when(repositoryFactura.save(any(Factura.class))).thenAnswer(inv -> guardada(inv.getArgument(0)));
 
         FacturaDTO factura = facturaService.emitir(new EmitirFacturaDTO(contratista.getId(),
-                List.of(new LineaSolicitudDTO(producto.getSku(), 3)), FormaPago.CREDITO, "Despacho a obra"));
+                List.of(new LineaSolicitudDTO(producto.getSku(), 3)), FormaPago.CREDITO, "Despacho a obra", null));
 
         assertThat(factura.getPagada()).isFalse();
         assertThat(factura.getVence()).isNotNull();
         assertThat(factura.getEntrega()).isEqualTo("Despacho a obra");
         verify(creditoApi).cargar(eq(contratista.getId()), eq(30_000L), eq("F-1"), anyString());
+    }
+
+    @Test
+    void elDespachoSeCobraBajoElMontoMinimo() {
+        UserDTO cliente = cliente();
+        ProductoDTO producto = producto(10_000L);
+        when(usuarioApi.obtenerPorId(cliente.getId())).thenReturn(cliente);
+        when(productoApi.obtenerPorSku(producto.getSku())).thenReturn(producto);
+        when(repositoryFactura.save(any(Factura.class))).thenAnswer(inv -> guardada(inv.getArgument(0)));
+
+        FacturaDTO factura = facturaService.emitir(new EmitirFacturaDTO(cliente.getId(),
+                List.of(new LineaSolicitudDTO(producto.getSku(), 2)), null, "Despacho a Los Aromos 455", true));
+
+        assertThat(factura.getCostoDespacho()).isEqualTo(FacturaService.COSTO_DESPACHO);
+        assertThat(factura.getTotal()).isEqualTo(20_000L + FacturaService.COSTO_DESPACHO);
+        assertThat(factura.getNeto() + factura.getIva()).isEqualTo(factura.getTotal());
+    }
+
+    @Test
+    void elDespachoEsGratisDesdeElMontoMinimo() {
+        assertThat(FacturaService.calcularDespacho(true, 150_000L)).isZero();
+        assertThat(FacturaService.calcularDespacho(true, 149_990L)).isEqualTo(FacturaService.COSTO_DESPACHO);
+        assertThat(FacturaService.calcularDespacho(false, 1_000L)).isZero();
     }
 
     @Test
@@ -217,7 +240,7 @@ class FacturaServiceTest {
         when(usuarioApi.obtenerPorId(cliente.getId())).thenReturn(cliente);
 
         assertThatThrownBy(() -> facturaService.emitir(new EmitirFacturaDTO(cliente.getId(),
-                List.of(new LineaSolicitudDTO(DatosDePrueba.sku(), 1)), FormaPago.CREDITO, null)))
+                List.of(new LineaSolicitudDTO(DatosDePrueba.sku(), 1)), FormaPago.CREDITO, null, null)))
                 .isInstanceOf(ResponseStatusException.class);
         verify(inventarioApi, never()).descontarStock(anyString(), anyInt());
     }

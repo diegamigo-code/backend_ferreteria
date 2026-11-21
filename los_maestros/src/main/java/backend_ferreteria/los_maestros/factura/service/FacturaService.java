@@ -37,6 +37,8 @@ public class FacturaService implements FacturaApi {
 
     public static final long IVA_PORCENTAJE = 19;
     public static final int DIAS_CREDITO = 30;
+    public static final long DESPACHO_GRATIS_DESDE = 150_000;
+    public static final long COSTO_DESPACHO = 6_990;
 
     private final RepositoryFactura repositoryFactura;
     private final UsuarioApi usuarioApi;
@@ -97,6 +99,10 @@ public class FacturaService implements FacturaApi {
             factura.agregarLinea(new LineaFactura(null, null, sku, producto.getNombre(),
                     producto.getPrecio(), cantidad, subtotal));
         }
+
+        long costoDespacho = calcularDespacho(Boolean.TRUE.equals(solicitud.getDespacho()), total);
+        factura.setCostoDespacho(costoDespacho);
+        total = Math.addExact(total, costoDespacho);
 
         long neto = calcularNeto(total);
         factura.setTotal(total);
@@ -169,6 +175,10 @@ public class FacturaService implements FacturaApi {
         return repositoryFactura.buscar(usuarioId, estado, desde, hasta, pageable).map(this::toDTO);
     }
 
+    static long calcularDespacho(boolean despacho, long subtotal) {
+        return despacho && subtotal < DESPACHO_GRATIS_DESDE ? COSTO_DESPACHO : 0;
+    }
+
     static long calcularNeto(long total) {
         return Math.round(total * 100.0 / (100 + IVA_PORCENTAJE));
     }
@@ -202,7 +212,8 @@ public class FacturaService implements FacturaApi {
                 factura.getEntrega(),
                 factura.getEstadoPedido(),
                 factura.getVence(),
-                factura.getPagada()
+                factura.getPagada(),
+                factura.getCostoDespacho()
         );
     }
 }

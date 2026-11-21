@@ -33,4 +33,5 @@ public class FacturaDTO {
     private EstadoPedido estadoPedido;
     private LocalDate vence;
     private Boolean pagada;
+    private Long costoDespacho;
 }

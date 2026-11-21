@@ -85,6 +85,9 @@ public class Factura {
 
     private Boolean pagada;
 
+    @Column(name = "costo_despacho")
+    private Long costoDespacho;
+
     @OneToMany(mappedBy = "factura", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id")
     @BatchSize(size = 50)

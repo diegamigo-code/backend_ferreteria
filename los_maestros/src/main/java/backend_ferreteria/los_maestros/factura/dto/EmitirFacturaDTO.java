@@ -30,7 +30,9 @@ public class EmitirFacturaDTO {
     @Size(max = 255)
     private String entrega;
 
+    private Boolean despacho;
+
     public EmitirFacturaDTO(Long usuarioId, List<LineaSolicitudDTO> lineas) {
-        this(usuarioId, lineas, null, null);
+        this(usuarioId, lineas, null, null, null);
     }
 }
