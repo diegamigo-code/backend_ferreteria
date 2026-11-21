@@ -60,4 +60,10 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Rol rol;
+
+    @Column(length = 12)
+    private String rut;
+
+    @Column(length = 20)
+    private String telefono;
 }

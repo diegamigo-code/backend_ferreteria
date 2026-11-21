@@ -42,7 +42,7 @@ public class AdminInicial implements ApplicationRunner {
             return;
         }
         userRepository.save(new User(null, "Administrador", email, LocalDate.of(2000, 1, 1),
-                "Sin dirección", passwordEncoder.encode(password), Rol.ADMIN));
+                "Sin dirección", passwordEncoder.encode(password), Rol.ADMIN, null, null));
         log.info("Usuario administrador inicial creado: {}", email);
     }
 }

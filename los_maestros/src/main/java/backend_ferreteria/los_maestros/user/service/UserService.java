@@ -50,7 +50,7 @@ public class UserService implements UsuarioApi {
     @Override
     @Transactional
     public UserDTO registrar(UserDTO dto) {
-        return guardarNuevo(dto, Rol.CLIENTE);
+        return guardarNuevo(dto, dto.getRol() == Rol.CONTRATISTA ? Rol.CONTRATISTA : Rol.CLIENTE);
     }
 
     @Transactional
@@ -69,6 +69,8 @@ public class UserService implements UsuarioApi {
         user.setEmail(email);
         user.setFechaNacimiento(dto.getFechaNacimiento());
         user.setDireccion(dto.getDireccion());
+        user.setRut(dto.getRut());
+        user.setTelefono(dto.getTelefono());
         if (dto.getPassword() != null && !dto.getPassword().isBlank()) {
             user.setPassword(passwordEncoder.encode(dto.getPassword()));
         }
@@ -92,7 +94,7 @@ public class UserService implements UsuarioApi {
             throw emailRepetido(email);
         }
         User user = new User(null, dto.getNombre(), email, dto.getFechaNacimiento(), dto.getDireccion(),
-                passwordEncoder.encode(dto.getPassword()), rol);
+                passwordEncoder.encode(dto.getPassword()), rol, dto.getRut(), dto.getTelefono());
         return toDTO(userRepository.save(user));
     }
 
@@ -117,7 +119,9 @@ public class UserService implements UsuarioApi {
                 user.getFechaNacimiento(),
                 user.getDireccion(),
                 null,
-                user.getRol()
+                user.getRol(),
+                user.getRut(),
+                user.getTelefono()
         );
     }
 }

@@ -45,4 +45,10 @@ public class UserDTO {
     private String password;
 
     private Rol rol;
+
+    @Size(max = 12)
+    private String rut;
+
+    @Size(max = 20)
+    private String telefono;
 }

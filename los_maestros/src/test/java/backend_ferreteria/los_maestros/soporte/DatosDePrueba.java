@@ -72,7 +72,9 @@ public final class DatosDePrueba {
                 FAKER.timeAndDate().birthday(18, 80),
                 recortar(FAKER.address().fullAddress(), 255),
                 password(),
-                null
+                null,
+                FAKER.regexify("[1-2][0-9]\\.[0-9]{3}\\.[0-9]{3}-[0-9K]"),
+                FAKER.regexify("\\+569[0-9]{8}")
         );
     }
 

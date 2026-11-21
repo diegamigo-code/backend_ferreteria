@@ -149,8 +149,22 @@ class UserServiceTest {
         assertThat(userService.registrar(dto).getRol()).isEqualTo(Rol.CLIENTE);
     }
 
+    @Test
+    void registrarPermiteCrearUnContratista() {
+        UserDTO dto = DatosDePrueba.usuarioDTO();
+        dto.setRol(Rol.CONTRATISTA);
+        when(passwordEncoder.encode(anyString())).thenReturn("hash");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserDTO creado = userService.registrar(dto);
+
+        assertThat(creado.getRol()).isEqualTo(Rol.CONTRATISTA);
+        assertThat(creado.getRut()).isEqualTo(dto.getRut());
+        assertThat(creado.getTelefono()).isEqualTo(dto.getTelefono());
+    }
+
     private static User existente(UserDTO datos) {
         return new User(1L, datos.getNombre(), datos.getEmail(), datos.getFechaNacimiento(),
-                datos.getDireccion(), "hash-anterior", Rol.CLIENTE);
+                datos.getDireccion(), "hash-anterior", Rol.CLIENTE, datos.getRut(), datos.getTelefono());
     }
 }

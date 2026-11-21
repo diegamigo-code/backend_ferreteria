@@ -47,7 +47,7 @@ class AuthIntegracionTest {
         adminEmail = DatosDePrueba.email();
         adminPassword = DatosDePrueba.password();
         userRepository.save(new User(null, "Admin de prueba", adminEmail, LocalDate.of(1990, 1, 1),
-                "Sin dirección", passwordEncoder.encode(adminPassword), Rol.ADMIN));
+                "Sin dirección", passwordEncoder.encode(adminPassword), Rol.ADMIN, null, null));
         emailsCreados.add(adminEmail);
     }
 
