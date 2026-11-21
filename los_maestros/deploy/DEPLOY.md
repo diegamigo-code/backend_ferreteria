@@ -61,7 +61,16 @@ curl http://localhost:8080/actuator/health          # {"status":"UP"}
 - API: `http://<IP-PUBLICA>:8080/api/productos`
 - Swagger: `http://<IP-PUBLICA>:8080/swagger-ui.html`
 
-## 4. Actualizar a una nueva versión
+## 4. Primer uso
+
+1. Entra al sitio con `ADMIN_EMAIL` / `ADMIN_PASSWORD`: el catálogo y el stock ya vienen cargados.
+2. Los contratistas se registran marcando "Soy contratista"; en **Panel → Usuarios** se les asigna el cupo de crédito.
+3. Los pagos de facturas a crédito se registran en **Panel → Pedidos → Registrar pago**.
+
+El frontend se publica en un bucket S3; los pasos están en el README del repo del frontend
+(sección *Despliegue en AWS*). La URL del bucket va en `CORS_ORIGIN`.
+
+## 5. Actualizar a una nueva versión
 
 ```bash
 scp -i labsuser.pem app.jar ec2-user@<IP-PUBLICA>:/opt/los-maestros-backend/

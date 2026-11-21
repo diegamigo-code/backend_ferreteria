@@ -9,9 +9,12 @@ API REST de la ferretería Los Maestros (Spring Boot 4, Java 21). El proyecto es
 | --- | --- |
 | `/api/auth/login`, `/api/auth/registro`, `/api/auth/me` | Login con JWT, registro de clientes y datos del usuario actual |
 | `/api/productos` | Productos (CRUD por SKU, filtros por categoría y marca) |
-| `/api/inventario` | Stock por producto, entradas, salidas y bajo stock |
-| `/api/usuarios` | Clientes |
-| `/api/facturas` | Emitir, consultar y anular facturas (descuenta y repone stock) |
+| `/api/inventario` | Stock por producto (consulta pública), entradas, salidas y bajo stock |
+| `/api/usuarios` | Usuarios (RUT, teléfono y rol) |
+| `/api/facturas` | Emitir, consultar y anular facturas (descuenta y repone stock), estado del pedido y pago |
+| `/api/facturas/mias` | Pedidos del usuario que inició sesión |
+| `/api/credito` | Cupo, saldo y movimientos del crédito a 30 días de los contratistas |
+| `/api/mensajes` | Formulario de contacto (envío público, lectura solo admin) |
 | `/api/auditoria` | Historial de cambios |
 | `/actuator/health` | Estado de la aplicación |
 | `/swagger-ui.html` | Documentación interactiva |
@@ -24,12 +27,18 @@ API REST de la ferretería Los Maestros (Spring Boot 4, Java 21). El proyecto es
 
 | Rol | Puede |
 | --- | --- |
-| Público (sin token) | Ver productos, registrarse, iniciar sesión, `/actuator/health`, Swagger |
-| `CLIENTE` | Lo anterior y `GET /api/auth/me` |
-| `VENDEDOR` | Lo anterior, facturas y movimientos de inventario (entrada/salida, consultas) |
-| `ADMIN` | Todo: productos, usuarios, auditoría y configuración de inventario |
+| Público (sin token) | Ver productos y stock, registrarse, iniciar sesión, enviar mensajes de contacto, `/actuator/health`, Swagger |
+| `CLIENTE` | Lo anterior, `GET /api/auth/me`, comprar (`POST /api/facturas`) y ver sus pedidos (`GET /api/facturas/mias`) |
+| `CONTRATISTA` | Lo mismo que el cliente, y comprar con `"formaPago":"CREDITO"` hasta su cupo; ve su cuenta en `GET /api/credito/mio` |
+| `VENDEDOR` | Lo anterior, todas las facturas y movimientos de inventario (entrada/salida, consultas) |
+| `ADMIN` | Todo: productos, usuarios, auditoría, inventario, cupos de crédito, pagos y mensajes |
 
-`POST /api/auth/registro` siempre crea un `CLIENTE`. Los vendedores y otros administradores los crea un `ADMIN` en `POST /api/usuarios` indicando `"rol"`.
+`POST /api/auth/registro` crea un `CLIENTE`, o un `CONTRATISTA` si se envía `"rol":"CONTRATISTA"` (sin cupo hasta que el admin lo asigne con `PUT /api/credito/{usuarioId}`). Los vendedores y otros administradores los crea un `ADMIN` en `POST /api/usuarios` indicando `"rol"`.
+Cuando un cliente o contratista emite una factura, el `usuarioId` se toma del token, no del body.
+
+## Datos iniciales
+
+Al primer arranque, si la tabla de productos está vacía, se cargan los 33 productos del catálogo con su stock desde `src/main/resources/catalogo-inicial.json`. Se desactiva con `app.catalogo.cargar-inicial=false`.
 Al arrancar, si no hay ningún `ADMIN`, se crea uno con `ADMIN_EMAIL` / `ADMIN_PASSWORD`
 (en el perfil por defecto: `admin@losmaestros.cl` / `admin12345`).
 
