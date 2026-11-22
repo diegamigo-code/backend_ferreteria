@@ -14,4 +14,4 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build /src/target/app.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-Xmx512m", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-jar", "app.jar"]
