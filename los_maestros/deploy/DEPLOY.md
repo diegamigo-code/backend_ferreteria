@@ -1,122 +1,63 @@
-# Despliegue en EC2 (AWS Academy Learner Lab)
+# Despliegue en Render
 
-El Learner Lab entrega credenciales temporales, por lo que el despliegue se hace
-a mano con el artefacto que genera GitHub Actions.
+El backend se construye con el `Dockerfile` de `los_maestros/` en un Web Service gratis de Render.
+La base es un MySQL gratis de Aiven, porque Render no ofrece MySQL. Render entrega una URL HTTPS
+fija (`https://<servicio>.onrender.com`) y vuelve a desplegar con cada push a `main`.
 
-## 1. Descargar el artefacto
+## 1. Base MySQL en Aiven
 
-En GitHub: **Actions → CI → (ejecución) → Artifacts → `los-maestros-backend-<sha>`**,
-o con la CLI:
+1. En [aiven.io](https://aiven.io): **Create service → MySQL → Free plan**.
+2. Cuando quede en *Running*, copiar de **Connection information**: host, puerto, usuario
+   (`avnadmin`), contraseña y base (`defaultdb`). La conexión usa SSL y el driver lo activa solo.
 
-```bash
-gh run download --repo diegamigo-code/backend_ferreteria --dir artefacto
+## 2. Web Service en Render
+
+1. En [render.com](https://render.com): **New → Web Service → `backend_ferreteria`**.
+2. Configurar:
+   - **Root Directory**: `los_maestros`
+   - **Language**: Docker
+   - **Instance Type**: Free
+   - **Health Check Path** (en *Advanced*): `/actuator/health`
+3. En **Environment Variables**:
+
+```
+SPRING_PROFILES_ACTIVE=prod
+DB_HOST=<host-de-aiven>
+DB_PORT=<puerto-de-aiven>
+DB_NAME=defaultdb
+DB_USER=avnadmin
+DB_PASSWORD=<contraseña-de-aiven>
+CORS_ORIGIN=https://tomihm.github.io
+JWT_SECRET=<mínimo 32 caracteres aleatorios, ej: openssl rand -base64 48>
+ADMIN_EMAIL=admin@losmaestros.cl
+ADMIN_PASSWORD=<contraseña-del-admin>
 ```
 
-El artefacto trae `app.jar`, `app.jar.sha256`, `app.env.example`,
-`los-maestros-backend.service`, `Caddyfile`, `los-maestros-caddy.service`, este `DEPLOY.md` y `BUILD_INFO.txt`.
+`PORT` lo pone Render y la aplicación lo lee sola. Si el frontend se publica en otra dirección,
+se agrega a `CORS_ORIGIN` separada por coma.
 
-## 2. Preparar la EC2 (una sola vez)
+La primera compilación demora varios minutos porque descarga las dependencias de Maven.
 
-- AMI: Amazon Linux 2023, tipo `t2.micro`/`t3.micro`, key pair `vockey` (o la tuya).
-- Security group: entrada TCP **22** (tu IP), **80** y **443** (0.0.0.0/0). El 80 lo usa Let's Encrypt para validar el certificado.
-  El **8080** solo hace falta para probar antes de tener HTTPS.
-
-### Elastic IP (para que la IP no cambie al reiniciar el laboratorio)
+## 3. Comprobar
 
 ```bash
-ID_EC2=<id-de-la-instancia>
-ASIGNACION=$(aws ec2 allocate-address --domain vpc --query AllocationId --output text)
-aws ec2 associate-address --instance-id $ID_EC2 --allocation-id $ASIGNACION
-aws ec2 describe-addresses --allocation-ids $ASIGNACION --query 'Addresses[0].PublicIp' --output text
+URL=https://<servicio>.onrender.com
+curl $URL/actuator/health
+curl "$URL/api/productos?size=3"
+curl -X POST $URL/api/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"admin@losmaestros.cl","password":"<contraseña-del-admin>"}'
 ```
 
-Con esa IP el dominio HTTPS queda como `54-12-34-56.sslip.io` (la IP con guiones). `sslip.io`
-resuelve ese nombre a la IP, así que no hace falta comprar un dominio.
+## Primer uso
 
-```bash
-sudo dnf install -y java-21-amazon-corretto-headless
-sudo mkdir -p /opt/los-maestros-backend && sudo chown ec2-user: /opt/los-maestros-backend
-```
+- En el primer arranque se crea el administrador de `ADMIN_EMAIL` y se carga el catálogo inicial
+  (33 productos con su stock) si la tabla de productos está vacía.
+- Los contratistas se registran desde el sitio; el administrador les asigna el cupo de crédito
+  desde el panel.
 
-### Base de datos
+## A tener en cuenta
 
-- **RDS (MySQL)**: en el security group de RDS, permite TCP 3306 desde el security group de la EC2.
-  `DB_HOST` es el endpoint de RDS.
-- **MySQL en la misma EC2**: `sudo dnf install -y mariadb105-server && sudo systemctl enable --now mariadb`,
-  crea el usuario y usa `DB_HOST=localhost`.
-
-La base `los_maestros` y sus tablas se crean solas al primer arranque.
-
-## 3. Copiar y configurar
-
-Desde tu equipo (con `labsuser.pem` descargado de *AWS Details*):
-
-```bash
-cd artefacto/los-maestros-backend-*/
-sha256sum -c app.jar.sha256
-scp -i labsuser.pem app.jar app.env.example los-maestros-backend.service Caddyfile los-maestros-caddy.service \
-    ec2-user@<IP-PUBLICA>:/opt/los-maestros-backend/
-```
-
-En la EC2:
-
-```bash
-cd /opt/los-maestros-backend
-cp app.env.example app.env && nano app.env          # completar variables
-chmod 600 app.env
-sudo cp los-maestros-backend.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now los-maestros-backend
-curl http://localhost:8080/actuator/health          # {"status":"UP"}
-```
-
-### HTTPS con Caddy
-
-Caddy recibe en el 443, saca solo el certificado de Let's Encrypt para `DOMINIO` y le pasa todo
-al backend en el 8080. Con HTTPS el frontend funciona tanto en S3 como en GitHub Pages.
-
-```bash
-curl -fL "https://caddyserver.com/api/download?os=linux&arch=amd64" -o caddy
-sudo install -m 755 caddy /usr/local/bin/caddy
-sudo cp /opt/los-maestros-backend/los-maestros-caddy.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now los-maestros-caddy
-curl https://<ip-con-guiones>.sslip.io/actuator/health   # {"status":"UP"}
-```
-
-`DOMINIO` se lee de `app.env`. Logs: `journalctl -u los-maestros-caddy -f`.
-Si Let's Encrypt rechaza el certificado por límite de solicitudes del dominio `sslip.io`,
-se puede probar con `nip.io` (`54-12-34-56.nip.io`) cambiando `DOMINIO`.
-
-- Login: `POST https://<DOMINIO>/api/auth/login` con el `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `app.env`
-- API: `https://<DOMINIO>/api/productos`
-- Swagger: `https://<DOMINIO>/swagger-ui.html`
-
-## 4. Primer uso
-
-1. Entra al sitio con `ADMIN_EMAIL` / `ADMIN_PASSWORD`: el catálogo y el stock ya vienen cargados.
-2. Los contratistas se registran marcando "Soy contratista"; en **Panel → Usuarios** se les asigna el cupo de crédito.
-3. Los pagos de facturas a crédito se registran en **Panel → Pedidos → Registrar pago**.
-
-El frontend se publica en un bucket S3 o en GitHub Pages; los pasos están en el README del repo
-del frontend (sección *Despliegue en AWS*). Las URLs del frontend van en `CORS_ORIGIN`, y
-`https://<DOMINIO>` va en el `config.js` del frontend.
-
-## 5. Actualizar a una nueva versión
-
-```bash
-scp -i labsuser.pem app.jar ec2-user@<IP-PUBLICA>:/opt/los-maestros-backend/
-ssh -i labsuser.pem ec2-user@<IP-PUBLICA> 'sudo systemctl restart los-maestros-backend'
-```
-
-## Con Docker (alternativa)
-
-```bash
-docker build -t los-maestros-backend .
-docker run -d -p 8080:8080 --env-file app.env los-maestros-backend
-```
-
-> Con la Elastic IP la dirección no cambia al reiniciar el laboratorio. Si igual cambia,
-> se actualiza `DOMINIO` en `app.env`, se reinicia Caddy y se cambia `config.js` del frontend
-> (no hace falta recompilar).
-> Logs: `journalctl -u los-maestros-backend -f`.
+- El plan gratis se apaga tras 15 minutos sin visitas y tarda cerca de un minuto en volver.
+  Antes de una demostración conviene abrir `$URL/actuator/health` y esperar a que responda.
+- Error de CORS en el navegador: la URL del sitio tiene que estar exacta en `CORS_ORIGIN`,
+  sin `/` al final.

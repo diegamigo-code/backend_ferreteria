@@ -64,12 +64,11 @@ cd los_maestros
 docker build -t los-maestros-backend .
 ```
 
-## CI y despliegue en EC2
+## CI y despliegue en Render
 
 El workflow `.github/workflows/ci.yml` se ejecuta en cada push/PR a `main` que toque `los_maestros/`
 (o a mano con *Run workflow*): compila con Java 21, corre las pruebas y publica el artefacto
-`los-maestros-backend-<sha>` con `app.jar`, su checksum, un `app.env.example` y la unidad systemd
-`los-maestros-backend.service`.
+`los-maestros-backend-<sha>` con `app.jar` y su checksum.
 
-Los pasos para instalarlo en una EC2 del AWS Academy Learner Lab están en
+El backend se despliega en Render con el `Dockerfile` y una base MySQL de Aiven; los pasos están en
 [`los_maestros/deploy/DEPLOY.md`](los_maestros/deploy/DEPLOY.md).
