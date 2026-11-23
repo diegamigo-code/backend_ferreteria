@@ -45,7 +45,14 @@ public class AuthService {
         Authentication autenticado = authenticationManager.authenticate(
                 UsernamePasswordAuthenticationToken.unauthenticated(email, login.getPassword()));
 
-        UserDTO usuario = usuarioApi.obtenerPorEmail(autenticado.getName());
+        return emitir(usuarioApi.obtenerPorEmail(autenticado.getName()));
+    }
+
+    public TokenDTO renovar(String email) {
+        return emitir(usuarioApi.obtenerPorEmail(email));
+    }
+
+    private TokenDTO emitir(UserDTO usuario) {
         Instant ahora = Instant.now();
         Instant expira = ahora.plus(expiracionMinutos, ChronoUnit.MINUTES);
 

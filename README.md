@@ -7,7 +7,7 @@ API REST de la ferretería Los Maestros (Spring Boot 4, Java 21). El proyecto es
 
 | Endpoint | Descripción |
 | --- | --- |
-| `/api/auth/login`, `/api/auth/registro`, `/api/auth/me` | Login con JWT, registro de clientes y datos del usuario actual |
+| `/api/auth/login`, `/api/auth/registro`, `/api/auth/renovar`, `/api/auth/me` | Login con JWT, registro de clientes, renovación del token y datos del usuario actual |
 | `/api/productos` | Productos (CRUD por SKU, filtros por categoría y marca) |
 | `/api/inventario` | Stock por producto (consulta pública), entradas, salidas y bajo stock |
 | `/api/usuarios` | Usuarios (RUT, teléfono y rol) |
@@ -23,7 +23,7 @@ API REST de la ferretería Los Maestros (Spring Boot 4, Java 21). El proyecto es
 
 1. `POST /api/auth/login` con `{"email":"...","password":"..."}` devuelve `{"token":"...","tipo":"Bearer",...}`.
 2. En cada petición protegida se envía el header `Authorization: Bearer <token>`.
-3. El token dura 60 minutos (`JWT_EXPIRACION_MINUTOS`).
+3. El token dura 60 minutos (`JWT_EXPIRACION_MINUTOS`). Antes de que venza, `POST /api/auth/renovar` con el token vigente entrega uno nuevo con el rol actual del usuario.
 
 | Rol | Puede |
 | --- | --- |

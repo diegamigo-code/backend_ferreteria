@@ -96,6 +96,28 @@ class AuthIntegracionTest {
     }
 
     @Test
+    void conUnTokenValidoSeObtieneUnoNuevo() throws Exception {
+        String token = login(adminEmail, adminPassword);
+
+        String respuesta = mockMvc.perform(post("/api/auth/renovar").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(adminEmail))
+                .andExpect(jsonPath("$.rol").value("ADMIN"))
+                .andExpect(jsonPath("$.expiraEn").exists())
+                .andReturn().getResponse().getContentAsString();
+        String nuevo = JsonPath.read(respuesta, "$.token");
+
+        mockMvc.perform(get("/api/usuarios").header(HttpHeaders.AUTHORIZATION, "Bearer " + nuevo))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void sinTokenNoSePuedeRenovar() throws Exception {
+        mockMvc.perform(post("/api/auth/renovar"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void elCatalogoDeProductosEsPublico() throws Exception {
         mockMvc.perform(get("/api/productos"))
                 .andExpect(status().isOk());

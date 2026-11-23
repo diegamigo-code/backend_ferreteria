@@ -37,6 +37,11 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(usuarioApi.registrar(dto));
     }
 
+    @PostMapping("/renovar")
+    public ResponseEntity<TokenDTO> renovar(Authentication authentication) {
+        return ResponseEntity.ok(authService.renovar(authentication.getName()));
+    }
+
     @GetMapping("/me")
     public ResponseEntity<UserDTO> me(Authentication authentication) {
         return ResponseEntity.ok(usuarioApi.obtenerPorEmail(authentication.getName()));
