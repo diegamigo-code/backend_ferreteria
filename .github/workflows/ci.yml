@@ -45,7 +45,7 @@ jobs:
         run: |
           mkdir -p dist
           cp target/app.jar dist/app.jar
-          cp deploy/DEPLOY.md dist/
+          cp deploy/app.env.example deploy/los-maestros-backend.service deploy/Caddyfile deploy/los-maestros-caddy.service deploy/DEPLOY.md dist/
           (cd dist && sha256sum app.jar > app.jar.sha256)
           echo "Commit: ${GITHUB_SHA}" > dist/BUILD_INFO.txt
           echo "Run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" >> dist/BUILD_INFO.txt
